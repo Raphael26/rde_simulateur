@@ -32,7 +32,6 @@
 #CMD reflex run --env prod --backend-only --loglevel debug & \
 #    caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
 
-
 # Utilise une image Python officielle
 FROM python:3.12-slim
 
@@ -51,8 +50,7 @@ COPY . .
 # Installe les dépendances Python
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Initialiser et pré-compiler le frontend pendant le build Docker
-# Cela évite de compiler au runtime (qui cause l'erreur EAGAIN)
+# Initialiser et pré-compiler le frontend
 RUN reflex init
 RUN reflex export --frontend-only --no-zip
 
@@ -62,9 +60,12 @@ EXPOSE 8080
 # Copier le Caddyfile
 COPY Caddyfile /etc/caddy/Caddyfile
 
-# Script de démarrage avec migrations et gestion correcte des processus
+# Script de démarrage
 RUN echo '#!/bin/bash\n\
 set -e\n\
+\n\
+echo "Creating database migrations if needed..."\n\
+reflex db makemigrations || echo "No new migrations needed"\n\
 \n\
 echo "Running database migrations..."\n\
 reflex db migrate || echo "Migration skipped or not needed"\n\
@@ -73,16 +74,19 @@ echo "Starting Reflex backend on port 8000..."\n\
 reflex run --env prod --backend-only --loglevel info &\n\
 BACKEND_PID=$!\n\
 \n\
-# Attendre que le backend soit prêt\n\
+# Wait for backend to be ready\n\
 echo "Waiting for backend to start..."\n\
-sleep 10\n\
+for i in {1..30}; do\n\
+  if curl -s http://localhost:8000/ping > /dev/null 2>&1; then\n\
+    echo "Backend is ready!"\n\
+    break\n\
+  fi\n\
+  echo "Waiting... ($i/30)"\n\
+  sleep 1\n\
+done\n\
 \n\
 echo "Starting Caddy on port 8080..."\n\
-caddy run --config /etc/caddy/Caddyfile --adapter caddyfile &\n\
-CADDY_PID=$!\n\
-\n\
-# Attendre que les deux processus se terminent\n\
-wait $BACKEND_PID $CADDY_PID\n\
+exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile\n\
 ' > /app/start.sh && chmod +x /app/start.sh
 
 CMD ["/bin/bash", "/app/start.sh"]

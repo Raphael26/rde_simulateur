@@ -18,12 +18,20 @@ database_url = os.getenv("DATABASE_URL", "")
 if database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
 
-# Fallback for local development (optional - remove or update as needed)
+# Fallback for local development
 if not database_url:
-    database_url = "sqlite:///reflex.db"  # Local SQLite for development
+    database_url = "sqlite:///reflex.db"
+
+# Get the public URL from environment (Railway sets RAILWAY_PUBLIC_DOMAIN)
+public_domain = os.getenv("RAILWAY_PUBLIC_DOMAIN", "")
+if public_domain:
+    api_url = f"https://{public_domain}"
+else:
+    api_url = None  # Use default for local dev
 
 config = rx.Config(
     app_name="prime_simulateur",
     db_url=database_url,
+    api_url=api_url,
     show_built_with_reflex=False,
 )

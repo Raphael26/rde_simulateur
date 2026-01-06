@@ -1,20 +1,10 @@
-# Caddy configuration pour Reflex
 :8080 {
-    # Servir les fichiers statiques du frontend
-    root * /app/.web/_static
-    
-    # Proxy WebSocket et API vers le backend Reflex
-    @backend {
-        path /_event/*
-        path /ping
-        path /_upload/*
-    }
-    
+    # Handle backend API and WebSocket requests
+    @backend path /_event* /ping /_upload*
     reverse_proxy @backend localhost:8000
-    
-    # Servir les fichiers statiques
+
+    # Serve static frontend files
+    root * /app/.web/_static
     file_server
-    
-    # Fallback pour le SPA (Single Page Application)
     try_files {path} {path}/ /index.html
 }
