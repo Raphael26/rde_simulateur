@@ -24,14 +24,18 @@ if not database_url:
 
 # Get the public URL from environment (Railway sets RAILWAY_PUBLIC_DOMAIN)
 public_domain = os.getenv("RAILWAY_PUBLIC_DOMAIN", "")
-if public_domain:
-    api_url = f"https://{public_domain}"
-else:
-    api_url = None  # Use default for local dev
 
-config = rx.Config(
-    app_name="prime_simulateur",
-    db_url=database_url,
-    api_url=api_url,
-    show_built_with_reflex=False,
-)
+# Build config - only include api_url if we have a public domain
+if public_domain:
+    config = rx.Config(
+        app_name="prime_simulateur",
+        db_url=database_url,
+        api_url=f"https://{public_domain}",
+        show_built_with_reflex=False,
+    )
+else:
+    config = rx.Config(
+        app_name="prime_simulateur",
+        db_url=database_url,
+        show_built_with_reflex=False,
+    )
