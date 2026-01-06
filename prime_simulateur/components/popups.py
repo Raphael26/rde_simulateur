@@ -366,14 +366,12 @@
 #
 
 import reflex as rx
-import reflex_chakra as rc
 import variables
 from prime_simulateur import prime_simulateur as ps
 from back.auth_class import AuthState
 from prime_simulateur.components import text_styles as ts
 from back.auth.react_auth_google import GoogleOAuthProvider, GoogleLogin
 from dotenv import load_dotenv
-import os
 
 load_dotenv()
 

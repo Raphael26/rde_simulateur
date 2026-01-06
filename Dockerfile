@@ -38,7 +38,7 @@ FROM python:3.12-slim
 
 # Installe les paquets système requis
 RUN apt-get update && \
-    apt-get install -y unzip curl && \
+    apt-get install -y unzip curl caddy && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -51,23 +51,38 @@ COPY . .
 # Installe les dépendances Python
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Initialiser Reflex
+# Initialiser et pré-compiler le frontend pendant le build Docker
+# Cela évite de compiler au runtime (qui cause l'erreur EAGAIN)
 RUN reflex init
+RUN reflex export --frontend-only --no-zip
 
-# Exposer le port (Railway assigne dynamiquement via $PORT)
+# Exposer le port
 EXPOSE 8080
 
-# Script de démarrage qui utilise le PORT de Railway
+# Copier le Caddyfile
+COPY Caddyfile /etc/caddy/Caddyfile
+
+# Script de démarrage avec migrations et gestion correcte des processus
 RUN echo '#!/bin/bash\n\
 set -e\n\
 \n\
-# Utiliser le PORT de Railway ou 8080 par défaut\n\
-PORT="${PORT:-8080}"\n\
+echo "Running database migrations..."\n\
+reflex db migrate || echo "Migration skipped or not needed"\n\
 \n\
-echo "Starting Reflex on port $PORT..."\n\
+echo "Starting Reflex backend on port 8000..."\n\
+reflex run --env prod --backend-only --loglevel info &\n\
+BACKEND_PID=$!\n\
 \n\
-# Lancer Reflex en mode production\n\
-exec reflex run --env prod --backend-host 0.0.0.0 --backend-port $PORT --loglevel info\n\
+# Attendre que le backend soit prêt\n\
+echo "Waiting for backend to start..."\n\
+sleep 10\n\
+\n\
+echo "Starting Caddy on port 8080..."\n\
+caddy run --config /etc/caddy/Caddyfile --adapter caddyfile &\n\
+CADDY_PID=$!\n\
+\n\
+# Attendre que les deux processus se terminent\n\
+wait $BACKEND_PID $CADDY_PID\n\
 ' > /app/start.sh && chmod +x /app/start.sh
 
 CMD ["/bin/bash", "/app/start.sh"]

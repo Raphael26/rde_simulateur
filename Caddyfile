@@ -1,10 +1,20 @@
-:8080
-encode gzip
-
-@backend_routes path /_event/* /ping /_upload /_upload/*
-handle @backend_routes {
-    reverse_proxy localhost:8000
+# Caddy configuration pour Reflex
+:8080 {
+    # Servir les fichiers statiques du frontend
+    root * /app/.web/_static
+    
+    # Proxy WebSocket et API vers le backend Reflex
+    @backend {
+        path /_event/*
+        path /ping
+        path /_upload/*
+    }
+    
+    reverse_proxy @backend localhost:8000
+    
+    # Servir les fichiers statiques
+    file_server
+    
+    # Fallback pour le SPA (Single Page Application)
+    try_files {path} {path}/ /index.html
 }
-
-root * /app/.web/_static
-file_server
