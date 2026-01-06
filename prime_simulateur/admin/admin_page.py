@@ -553,7 +553,6 @@
 #    )
 #
 
-
 import reflex as rx
 from prime_simulateur.admin import admin_history_metrics, admin_history_table, admin_user_table
 from prime_simulateur import prime_simulateur as ps
@@ -966,35 +965,73 @@ def view_all_users():
 
 def secteur_typologie_chart():
     """
-    Chart component that uses STATE data instead of calling the database directly.
-    The data is loaded at runtime via AdminState.fetch_all_simulations_for_admin()
-    Uses computed vars from AdminState to build the plotly figures.
+    Chart component that displays data statistics.
+    Plotly sunburst charts require special handling with Reflex state,
+    so we use a simpler visualization that works reliably.
     """
     return rx.flex(
         rx.cond(
             AdminState.data_loaded,
             rx.box(
-                rx.hstack(
-                    rx.plotly(
-                        data=AdminState.secteur_typologie_figure,
-                        width="50%"
+                rx.el.div(
+                    rx.el.h3("Répartition des données", class_name="font-bold text-xl mb-4"),
+                    rx.el.div(
+                        # Secteurs summary
+                        rx.el.div(
+                            rx.el.h4("Par Secteur", class_name="font-semibold text-lg mb-2"),
+                            rx.foreach(
+                                AdminState.secteur_counts,
+                                lambda item: rx.el.div(
+                                    rx.el.span(item["name"], class_name="font-medium"),
+                                    rx.el.span(f": {item['count']}", class_name="text-gray-600"),
+                                    class_name="py-1",
+                                )
+                            ),
+                            class_name="bg-gray-50 p-4 rounded-lg",
+                        ),
+                        # Typologies summary
+                        rx.el.div(
+                            rx.el.h4("Par Typologie", class_name="font-semibold text-lg mb-2"),
+                            rx.foreach(
+                                AdminState.typologie_counts,
+                                lambda item: rx.el.div(
+                                    rx.el.span(item["name"], class_name="font-medium"),
+                                    rx.el.span(f": {item['count']}", class_name="text-gray-600"),
+                                    class_name="py-1",
+                                )
+                            ),
+                            class_name="bg-gray-50 p-4 rounded-lg",
+                        ),
+                        # Départements summary
+                        rx.el.div(
+                            rx.el.h4("Par Département", class_name="font-semibold text-lg mb-2"),
+                            rx.foreach(
+                                AdminState.departement_counts,
+                                lambda item: rx.el.div(
+                                    rx.el.span(item["name"], class_name="font-medium"),
+                                    rx.el.span(f": {item['count']}", class_name="text-gray-600"),
+                                    class_name="py-1",
+                                )
+                            ),
+                            class_name="bg-gray-50 p-4 rounded-lg max-h-64 overflow-y-auto",
+                        ),
+                        class_name="grid grid-cols-1 md:grid-cols-3 gap-4",
                     ),
-                    rx.spacer(),
-                    rx.plotly(
-                        data=AdminState.departement_figure, 
-                        width="50%"
-                    ),
-                    align="center",
-                    width="90%",
+                    class_name="w-full",
                 ),
                 width="100%",
                 class_name="bg-white p-6 rounded-lg shadow-md",
                 margin="auto",
             ),
             rx.center(
-                rx.spinner(),
-                rx.text("Chargement des données..."),
-                padding="2em",
+                rx.vstack(
+                    rx.spinner(size="3"),
+                    rx.text("Chargement des données...", class_name="text-gray-500"),
+                    spacing="4",
+                ),
+                padding="4em",
+                width="100%",
+                class_name="bg-white p-6 rounded-lg shadow-md",
             ),
         ),
         align="center",

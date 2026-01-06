@@ -617,6 +617,7 @@ from datetime import datetime
 
 import reflex as rx
 import plotly.express as px
+import plotly.graph_objects as go
 
 from reflex.event import EventSpec
 
@@ -691,6 +692,9 @@ class AdminState(rx.State):
     all_simulations_data: list[dict] = []
     chart_secteur_typologie_data: List[Dict[str, Union[str, int]]] = []
     chart_departement_data: List[Dict[str, Union[str, int]]] = []
+    # Store complete figure specs as dicts
+    secteur_figure_spec: dict = {}
+    departement_figure_spec: dict = {}
     data_loaded: bool = False
 
     COLUMN_MAPPING: List[Tuple[str, str]] = [
@@ -725,36 +729,42 @@ class AdminState(rx.State):
         return self.COLUMN_MAPPING
 
     @rx.var
-    def secteur_typologie_figure(self) -> dict:
-        """Computed var that returns the plotly figure for secteur/typologie sunburst."""
-        if not self.chart_secteur_typologie_data:
-            # Return empty figure if no data
-            return {}
-        
-        fig = px.sunburst(
-            self.chart_secteur_typologie_data,
-            title="Secteurs et typologies",
-            path=['secteur', 'typologie'],
-            values='count',
-            color='secteur',
-            color_discrete_map=TYPOLOGIE_COLORS,
-        )
-        return fig.to_dict()
+    def has_chart_data(self) -> bool:
+        """Check if chart data is available."""
+        return len(self.chart_secteur_typologie_data) > 0
 
     @rx.var
-    def departement_figure(self) -> dict:
-        """Computed var that returns the plotly figure for departement sunburst."""
+    def secteur_counts(self) -> List[Dict[str, Union[str, int]]]:
+        """Aggregate counts by secteur."""
+        if not self.chart_secteur_typologie_data:
+            return []
+        counts = {}
+        for item in self.chart_secteur_typologie_data:
+            secteur = item.get('secteur', 'Indéfini')
+            counts[secteur] = counts.get(secteur, 0) + 1
+        return [{"name": k, "count": v} for k, v in sorted(counts.items(), key=lambda x: -x[1])]
+
+    @rx.var
+    def typologie_counts(self) -> List[Dict[str, Union[str, int]]]:
+        """Aggregate counts by typologie."""
+        if not self.chart_secteur_typologie_data:
+            return []
+        counts = {}
+        for item in self.chart_secteur_typologie_data:
+            typologie = item.get('typologie', 'Indéfini')
+            counts[typologie] = counts.get(typologie, 0) + 1
+        return [{"name": k, "count": v} for k, v in sorted(counts.items(), key=lambda x: -x[1])]
+
+    @rx.var
+    def departement_counts(self) -> List[Dict[str, Union[str, int]]]:
+        """Aggregate counts by departement."""
         if not self.chart_departement_data:
-            # Return empty figure if no data
-            return {}
-        
-        fig = px.sunburst(
-            self.chart_departement_data,
-            title="Départements",
-            path=['departement'],
-            values='count',
-        )
-        return fig.to_dict()
+            return []
+        counts = {}
+        for item in self.chart_departement_data:
+            dept = item.get('departement', 'Indéfini')
+            counts[dept] = counts.get(dept, 0) + 1
+        return [{"name": k, "count": v} for k, v in sorted(counts.items(), key=lambda x: -x[1])]
 
     @rx.var
     def column_data_user(self) -> List[Tuple[str, Optional[SortColumn]]]:
@@ -812,7 +822,7 @@ class AdminState(rx.State):
                 self.data_loaded = True
 
     def _build_chart_data(self):
-        """Build the chart data from loaded simulations."""
+        """Build the chart data and figure specs from loaded simulations."""
         dicts_department = []
         dicts = []
         
@@ -837,6 +847,27 @@ class AdminState(rx.State):
         
         self.chart_departement_data = dicts_department
         self.chart_secteur_typologie_data = dicts
+        
+        # Build the plotly figure specs and store as dicts
+        if dicts:
+            fig_secteur = px.sunburst(
+                dicts,
+                title="Secteurs et typologies",
+                path=['secteur', 'typologie'],
+                values='count',
+                color='secteur',
+                color_discrete_map=TYPOLOGIE_COLORS,
+            )
+            self.secteur_figure_spec = fig_secteur.to_plotly_json()
+        
+        if dicts_department:
+            fig_dept = px.sunburst(
+                dicts_department,
+                title="Départements",
+                path=['departement'],
+                values='count',
+            )
+            self.departement_figure_spec = fig_dept.to_plotly_json()
 
     def set_admin_view(self, value):
         self.admin_view = value
