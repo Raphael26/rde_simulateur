@@ -475,9 +475,9 @@ class AuthState(rx.State):
     register_error: str = ""
     login_error: str = ""
     connected_user: str = ""
-    user_phone_number: str = ""
-    user_first_name: str = ""
-    user_last_name: str = ""
+    user_phone_number: Optional[str] = ""
+    user_first_name: Optional[str] = ""
+    user_last_name: Optional[str] = ""
     user_simulations: list[dict] = []
     filtered_simulations: list[dict] = []
     number_of_simulation: int = 0
@@ -614,9 +614,10 @@ class AuthState(rx.State):
             if user and user.password == hashed_password:
                 self.is_logged_in = True
                 self.connected_user = self.username
-                self.user_first_name = user.first_name
-                self.user_last_name = user.last_name
-                self.user_phone_number = user.phone_number
+                # Handle None values from database
+                self.user_first_name = user.first_name or ""
+                self.user_last_name = user.last_name or ""
+                self.user_phone_number = user.phone_number or ""
                 # FIXED: Use user.id directly instead of computed var
                 self.user_id = user.id
                 self.login_error = ""
@@ -650,9 +651,10 @@ class AuthState(rx.State):
             self.connected_user = email
             # FIXED: Use user.id directly instead of computed var
             self.user_id = user.id
-            self.user_first_name = user.first_name
-            self.user_last_name = user.last_name
-            self.user_phone_number = user.phone_number
+            # Handle None values from database
+            self.user_first_name = user.first_name or ""
+            self.user_last_name = user.last_name or ""
+            self.user_phone_number = user.phone_number or ""
             self.is_logged_in = True
             self.username = ""
             self.password = ""
