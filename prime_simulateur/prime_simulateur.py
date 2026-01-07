@@ -1270,7 +1270,6 @@
 #app.add_page(admin_page.page_admin_results_history)
 #app.add_page(mpr_page.page_admin_mpr_link)
 #
-
 import datetime
 from pyclbr import Function
 
@@ -1750,38 +1749,101 @@ class MultiStepFormState(rx.State):
         self.selected_pdf_description = pdf_description
         fiche_code = self.selected_pdf.replace(".pdf", "").strip()
         self.set_typology_from_pdf()
+        
+        print(f"=== Loading PDF: {pdf_name} ===")
+        print(f"Fiche code: {fiche_code}")
+        print(f"Bucket: {BUCKET_NAME}")
+        print(f"Supabase client exists: {supabase is not None}")
+        
+        # Debug: List what's in the bucket
+        try:
+            bucket_contents = supabase.storage.from_(BUCKET_NAME).list()
+            print(f"📂 Bucket root contains {len(bucket_contents)} items:")
+            for item in bucket_contents[:10]:  # Show first 10
+                print(f"   - {item.get('name', item)}")
+            
+            # Try to list the specific fiche folder
+            fiche_contents = supabase.storage.from_(BUCKET_NAME).list(fiche_code)
+            print(f"📂 Folder '{fiche_code}' contains {len(fiche_contents)} items:")
+            for item in fiche_contents:
+                print(f"   - {item.get('name', item)}")
+        except Exception as list_err:
+            print(f"⚠️ Could not list bucket contents: {list_err}")
+        
+        # If your bucket has a parent folder with the same name, set this to True
+        HAS_PARENT_FOLDER = False  # Structure A: files directly in bucket
+        
+        if HAS_PARENT_FOLDER:
+            base_path = f"fiches-operations/{fiche_code}"
+        else:
+            base_path = fiche_code
+        
+        print(f"Base path: {base_path}")
+        
         if self.research_manually == "Oui":
             pass
+        
         try:
+            # Try to read each file and log the result
+            print(f"📁 Reading: {base_path}/function_param_values_labeled.json")
             function_param_values_labeled = read_file_from_bucket(
                 supabase,
                 BUCKET_NAME,
-                file_path=f"/{fiche_code}/function_param_values_labeled.json",
+                file_path=f"{base_path}/function_param_values_labeled.json",
                 file_type="json"
             )
+            if function_param_values_labeled is None:
+                print(f"❌ Failed to read function_param_values_labeled.json")
+                raise Exception("Could not read function_param_values_labeled.json")
+            print(f"✅ function_param_values_labeled loaded")
+            
+            print(f"📁 Reading: {base_path}/variables_mapping.json")
             variables_mapping = read_file_from_bucket(
                 supabase,
                 BUCKET_NAME,
-                file_path=f"/{fiche_code}/variables_mapping.json",
+                file_path=f"{base_path}/variables_mapping.json",
                 file_type="json"
             )
+            if variables_mapping is None:
+                print(f"❌ Failed to read variables_mapping.json")
+                raise Exception("Could not read variables_mapping.json")
+            print(f"✅ variables_mapping loaded")
+            
+            print(f"📁 Reading: {base_path}/variables_matching.json")
             variables_matching = read_file_from_bucket(
                 supabase,
                 BUCKET_NAME,
-                file_path=f"/{fiche_code}/variables_matching.json",
+                file_path=f"{base_path}/variables_matching.json",
                 file_type="json"
             )
+            if variables_matching is None:
+                print(f"❌ Failed to read variables_matching.json")
+                raise Exception("Could not read variables_matching.json")
+            print(f"✅ variables_matching loaded")
+            
+            print(f"📁 Reading: {base_path}/string_function.txt")
             string_function = read_file_from_bucket(
                 supabase,
                 BUCKET_NAME,
-                file_path=f"/{fiche_code}/string_function.txt",
+                file_path=f"{base_path}/string_function.txt",
                 file_type="txt"
             )
+            if string_function is None:
+                print(f"❌ Failed to read string_function.txt")
+                raise Exception("Could not read string_function.txt")
+            print(f"✅ string_function loaded")
+            
         except Exception as e:
-            print(f"error is {e}")
+            print(f"❌ ERROR loading PDF data: {e}")
+            print(f"   PDF name: {pdf_name}")
+            print(f"   Fiche code: {fiche_code}")
+            print(f"   Expected path: {base_path}/ in bucket '{BUCKET_NAME}'")
             self.selected_pdf = ""
             self.selected_pdf_description = ""
             return rx.toast("Cette fiche n'est pas encore disponible !", duration=5000)
+        
+        print(f"✅ All files loaded successfully for {fiche_code}")
+        
         # print(f"param value is : {function_param_values_labeled}")
         # print(f"mapping is : {variables_mapping}")
         # print(f"matching is : {variables_matching}")
