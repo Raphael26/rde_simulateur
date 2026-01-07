@@ -1,12 +1,11 @@
 import os
-
 import reflex as rx
 from prime_simulateur.components import text_styles as ts
 from prime_simulateur import prime_simulateur as ps
 from prime_simulateur.admin.mpr_table import *
 import os
 from dotenv import load_dotenv
-from typing import Optional, Any
+from typing import Any
 from supabase import create_client, Client
 import json
 

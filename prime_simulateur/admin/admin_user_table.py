@@ -1,23 +1,8 @@
-from typing import Tuple, Optional, Literal, List, Any, Dict, Union
-
+from typing import Tuple, Optional, Literal, List
 from sqlalchemy import and_, select
-
 from back.auth_class import AuthState
-from models.models import CustomerData
-import ast
-from datetime import datetime
-
 import reflex as rx
-import plotly.express as px
-
-from reflex.event import EventSpec
-
-from models.simulation import SimulationResult
-from models.user import User
-from prime_simulateur import prime_simulateur as ps
 from prime_simulateur.admin.admin_history_table import AdminState
-from prime_simulateur.components import history_table
-
 
 
 SortColumn = Literal[
