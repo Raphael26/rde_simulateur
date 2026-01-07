@@ -1,10 +1,32 @@
 :8080 {
-    # Handle backend API and WebSocket requests
-    @backend path /_event* /ping /_upload*
-    reverse_proxy @backend localhost:8000
-
-    # Serve static frontend files
-    root * /app/.web/_static
-    file_server
-    try_files {path} {path}/ /index.html
+    # API and WebSocket routes to backend
+    # Match all variations of /_event path
+    @eventPath {
+        path /_event
+        path /_event/
+        path /_event/*
+    }
+    handle @eventPath {
+        reverse_proxy localhost:8000
+    }
+    
+    handle /ping {
+        reverse_proxy localhost:8000
+    }
+    
+    @uploadPath {
+        path /_upload
+        path /_upload/
+        path /_upload/*
+    }
+    handle @uploadPath {
+        reverse_proxy localhost:8000
+    }
+    
+    # Static files
+    handle {
+        root * /app/.web/_static
+        try_files {path} {path}/ /index.html
+        file_server
+    }
 }
