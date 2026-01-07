@@ -1,5 +1,4 @@
 import datetime
-from pyclbr import Function
 
 import reflex as rx
 import reflex_chakra as rc
